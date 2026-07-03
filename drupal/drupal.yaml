@@ -60,6 +60,8 @@ spec:
           env:
             - name: MARIADB_ROOT_PASSWORD
               value: dbroot123
+            - name: MARIADB_DATABASE
+              value: drupal
 ---
 apiVersion: v1
 kind: Service
