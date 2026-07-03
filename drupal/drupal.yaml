@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: drupal
-          image: library/drupal:11.0-apache
+          image: library/drupal:10.6.12-php8.3-apache-bookworm
           ports:
             - containerPort: 80
           env:
