@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal
+  namespace: icneo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drupal
+  template:
+    metadata:
+      labels:
+        app: drupal
+    spec:
+      containers:
+        - name: drupal
+          image: library/drupal:11.0-apache
+          ports:
+            - containerPort: 80
+          env:
+            - name: DRUPAL_DB_HOST
+              value: mariadb
+            - name: DRUPAL_DB_USER
+              value: root
+            - name: DRUPAL_DB_PASSWORD
+              value: dbroot123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal
+  namespace: icneo
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: drupal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: icneo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: library/mariadb:11.4
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              value: dbroot123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: icneo
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: mariadb
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: drupal-ingress
+  namespace: icneo
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: my-drupal.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: drupal
+                port:
+                  number: 80
