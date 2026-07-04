@@ -21,7 +21,7 @@ drupalPg:
   ingress:
     host: pg-drupal.local
   database:
-    host: host.docker.internal  # Change to host.minikube.internal if using Minikube
+    host: host.docker.internal
     name: drupaldb
     user: drupaldb_usr
     password: drupaldb_usr
