@@ -21,7 +21,12 @@ spec:
           image: "{{ .Values.drupalPg.image.repository }}:{{ .Values.drupalPg.image.tag }}"
           imagePullPolicy: {{ .Values.drupalPg.image.pullPolicy }}
           ports:
-            - containerPort: 9000  # 🌟 Changed from 80 to 9000 for PHP-FPM
+            - containerPort: 80
+          # 🌟 Crucial: This builds the /mydrupal folder path structure natively inside the container 
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "ln -sf /var/www/html /var/www/html/mydrupal"]
           env:
             - name: DRUPAL_DB_HOST
               value: {{ .Values.drupalPg.database.host | quote }}
@@ -37,8 +42,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
-    - port: 9000        # 🌟 Exposed on 9000 to match the deployment port
-      targetPort: 9000
+    - port: 80
+      targetPort: 80
   selector:
     app: drupal-pg
 ---
@@ -51,20 +56,19 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-    # 🌟 Vital Annotation: Tells Nginx Ingress to speak FastCGI protocol, not raw HTTP
-    nginx.ingress.kubernetes.io/backend-protocol: "FCGI"
+    # 🌟 Notice: rewrite-target annotation is intentionally completely REMOVED here.
 spec:
   ingressClassName: nginx
   rules:
     - host: {{ .Values.drupalPg.ingress.host | quote }}
       http:
         paths:
-          - path: {{ printf "%s/?(.*)" .Values.drupalPg.contextPath | quote }}
-            pathType: ImplementationSpecific
+          # 🌟 Standard Prefix pathing passes /mydrupal straight through to Apache
+          - path: {{ .Values.drupalPg.contextPath | quote }}
+            pathType: Prefix
             backend:
               service:
                 name: drupal-pg
                 port:
-                  number: 9000  # 🌟 Routes ingress traffic directly into port 9000
+                  number: 80
 {{- end }}
