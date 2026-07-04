@@ -22,11 +22,7 @@ spec:
           imagePullPolicy: {{ .Values.drupalPg.image.pullPolicy }}
           ports:
             - containerPort: 80
-          # 🌟 Crucial: This builds the /mydrupal folder path structure natively inside the container 
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/bin/sh", "-c", "ln -sf /var/www/html /var/www/html/mydrupal"]
+          # 🌟 Removed the lifecycle postStart symlink block entirely
           env:
             - name: DRUPAL_DB_HOST
               value: {{ .Values.drupalPg.database.host | quote }}
@@ -56,14 +52,13 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
-    # 🌟 Notice: rewrite-target annotation is intentionally completely REMOVED here.
+    # 🌟 We use regular prefix matching, passing /mydrupal straight to Apache
 spec:
   ingressClassName: nginx
   rules:
     - host: {{ .Values.drupalPg.ingress.host | quote }}
       http:
         paths:
-          # 🌟 Standard Prefix pathing passes /mydrupal straight through to Apache
           - path: {{ .Values.drupalPg.contextPath | quote }}
             pathType: Prefix
             backend:
