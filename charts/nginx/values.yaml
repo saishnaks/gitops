@@ -17,6 +17,7 @@ drupalPg:
     repository: library/drupal
     tag: 10.6.12-php8.3-apache-bookworm
     pullPolicy: IfNotPresent
+  contextPath: /mydrupal
   ingress:
     host: pg-drupal.local
   database:
