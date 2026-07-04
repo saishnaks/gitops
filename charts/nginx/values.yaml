@@ -14,8 +14,8 @@ drupalPg:
   enabled: true
   replicaCount: 1
   image:
-    repository: wodby/drupal
-    tag: 10-8.3
+    repository: library/drupal
+    tag: 10.3-apache  # 🌟 Back to built-in Apache server on Port 80
     pullPolicy: IfNotPresent
   contextPath: /mydrupal
   ingress:
