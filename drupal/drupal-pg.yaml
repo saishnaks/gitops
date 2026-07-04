@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drupal-pg
+  namespace: icneo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: drupal-pg
+  template:
+    metadata:
+      labels:
+        app: drupal-pg
+    spec:
+      containers:
+        - name: drupal
+          image: library/drupal:10.6.12-php8.3-apache-bookworm
+          ports:
+            - containerPort: 80
+          env:
+            - name: DRUPAL_DB_HOST
+              value: host.docker.internal
+            - name: DRUPAL_DB_USER
+              value: drupaldb_usr
+            - name: DRUPAL_DB_PASSWORD
+              value: drupaldb_usr
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drupal-pg
+  namespace: icneo
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: drupal-pg
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: drupal-pg-ingress
+  namespace: icneo
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: pg-drupal.local # <-- Unique DNS routing handle for instance #2
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: drupal-pg
+                port:
+                  number: 80
