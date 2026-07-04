@@ -1,10 +1,13 @@
+{{- if .Values.drupalPg.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: drupal-pg
-  namespace: icneo
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: drupal-pg
 spec:
-  replicas: 1
+  replicas: {{ .Values.drupalPg.replicaCount }}
   selector:
     matchLabels:
       app: drupal-pg
@@ -15,25 +18,27 @@ spec:
     spec:
       containers:
         - name: drupal
-          image: library/drupal:10.6.12-php8.3-apache-bookworm
+          image: "{{ .Values.drupalPg.image.repository }}:{{ .Values.drupalPg.image.tag }}"
+          imagePullPolicy: {{ .Values.drupalPg.image.pullPolicy }}
           ports:
-            - containerPort: 80
+            - containerPort: 9000  # 🌟 Changed from 80 to 9000 for PHP-FPM
           env:
             - name: DRUPAL_DB_HOST
-              value: host.docker.internal
+              value: {{ .Values.drupalPg.database.host | quote }}
             - name: DRUPAL_DB_USER
-              value: drupaldb_usr
+              value: {{ .Values.drupalPg.database.user | quote }}
             - name: DRUPAL_DB_PASSWORD
-              value: drupaldb_usr
+              value: {{ .Values.drupalPg.database.password | quote }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: drupal-pg
-  namespace: icneo
+  namespace: {{ .Release.Namespace }}
 spec:
   ports:
-    - port: 80
+    - port: 9000        # 🌟 Exposed on 9000 to match the deployment port
+      targetPort: 9000
   selector:
     app: drupal-pg
 ---
@@ -41,21 +46,25 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: drupal-pg-ingress
-  namespace: icneo
+  namespace: {{ .Release.Namespace }}
   annotations:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    # 🌟 Vital Annotation: Tells Nginx Ingress to speak FastCGI protocol, not raw HTTP
+    nginx.ingress.kubernetes.io/backend-protocol: "FCGI"
 spec:
   ingressClassName: nginx
   rules:
-    - host: pg-drupal.local # <-- Unique DNS routing handle for instance #2
+    - host: {{ .Values.drupalPg.ingress.host | quote }}
       http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: {{ printf "%s/?(.*)" .Values.drupalPg.contextPath | quote }}
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: drupal-pg
                 port:
-                  number: 80
+                  number: 9000  # 🌟 Routes ingress traffic directly into port 9000
+{{- end }}
