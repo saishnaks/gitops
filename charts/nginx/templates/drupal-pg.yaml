@@ -22,6 +22,34 @@ spec:
           imagePullPolicy: {{ .Values.drupalPg.image.pullPolicy }}
           ports:
             - containerPort: 80
+          # Automates the settings.php injection to handle the /mydrupal subfolder
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    (
+                      # Wait until the installation wizard actually creates the file
+                      while [ ! -f /opt/drupal/web/sites/default/settings.php ]; do sleep 5; done
+                      
+                      # Make the file writable
+                      chmod 644 /opt/drupal/web/sites/default/settings.php
+                      
+                      # Only inject the settings if they aren't already there (idempotent)
+                      if ! grep -q 'base_path' /opt/drupal/web/sites/default/settings.php; then
+                        echo '$settings["reverse_proxy"] = TRUE;' >> /opt/drupal/web/sites/default/settings.php
+                        echo '$settings["reverse_proxy_addresses"] = [$_SERVER["REMOTE_ADDR"]];' >> /opt/drupal/web/sites/default/settings.php
+                        echo '$settings["trusted_host_patterns"] = ["^pg-drupal\.local$"];' >> /opt/drupal/web/sites/default/settings.php
+                        echo '$settings["base_path"] = "/mydrupal/";' >> /opt/drupal/web/sites/default/settings.php
+                        echo '$settings["rebuild_access"] = TRUE;' >> /opt/drupal/web/sites/default/settings.php
+                      fi
+                      
+                      if ! grep -q 'SCRIPT_NAME' /opt/drupal/web/sites/default/settings.php; then
+                        echo '$_SERVER["SCRIPT_NAME"] = "/mydrupal/index.php";' >> /opt/drupal/web/sites/default/settings.php
+                      fi
+                    ) &
           env:
             - name: DRUPAL_DB_HOST
               value: {{ .Values.drupalPg.database.host | quote }}
@@ -57,7 +85,7 @@ spec:
     - host: {{ .Values.drupalPg.ingress.host | quote }}
       http:
         paths:
-          - path: /
+          - path: {{ .Values.drupalPg.contextPath | quote }}
             pathType: Prefix
             backend:
               service:
