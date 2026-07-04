@@ -9,3 +9,18 @@ ingress:
   enabled: true
   className: nginx
   host: icneo-nginx.local
+  # Drupal PostgreSQL Instance Configuration
+drupalPg:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: library/drupal
+    tag: 10.6.12-php8.3-apache-bookworm
+    pullPolicy: IfNotPresent
+  ingress:
+    host: pg-drupal.local
+  database:
+    host: host.docker.internal  # Change to host.minikube.internal if using Minikube
+    name: drupaldb
+    user: drupaldb_usr
+    password: drupaldb_usr
