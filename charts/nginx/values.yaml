@@ -14,8 +14,8 @@ drupalPg:
   enabled: true
   replicaCount: 1
   image:
-    repository: library/drupal
-    tag: 10.6.12-php8.3-apache-bookworm
+    repository: wodby/drupal
+    tag: 10-apache
     pullPolicy: IfNotPresent
   contextPath: /mydrupal
   ingress:
